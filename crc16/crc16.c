@@ -59,10 +59,11 @@ static uint8_t reverseU8(const uint8_t data) {
 }
 
 static uint16_t reverseU16(const uint16_t data) {
-
     uint16_t num = 0;
-    for (uint8_t i = 0 ; i < 4; i++)
-        num |= ((uint16_t)rtab16[data >> (i * 4) & 0xF]) << (12 - (i * 4));
+    num |= ((uint16_t)rtab16[data >> (0 * 4) & 0xF]) << (12 - (0 * 4));
+    num |= ((uint16_t)rtab16[data >> (1 * 4) & 0xF]) << (12 - (1 * 4));
+    num |= ((uint16_t)rtab16[data >> (2 * 4) & 0xF]) << (12 - (2 * 4));
+    num |= ((uint16_t)rtab16[data >> (3 * 4) & 0xF]) << (12 - (3 * 4));
     return num;
 }
 

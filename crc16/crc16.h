@@ -8,7 +8,7 @@
 #include <stdbool.h>
 
 typedef struct _crc16_param_t {
-    uint16_t poly;  // ploy function
+    uint16_t poly;  // Polynomial function
     uint16_t init;  // initial val
     uint16_t xorOut;
     uint16_t check; // for "123456789" result
