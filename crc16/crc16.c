@@ -54,16 +54,16 @@ const static uint8_t rtab16[] = {
                     3, 11, 7, 15 };
 
 static uint8_t reverseU8(const uint8_t data) {
-    return (rtab16[data & 0xF] << 4) |
-           (rtab16[data >> 4 & 0xF]);
+    return (uint8_t)((rtab16[data & 0xF] << 4) |
+           (rtab16[data >> 4 & 0xF]));
 }
 
 static uint16_t reverseU16(const uint16_t data) {
     uint16_t num = 0;
-    num |= ((uint16_t)rtab16[data >> (0 * 4) & 0xF]) << (12 - (0 * 4));
-    num |= ((uint16_t)rtab16[data >> (1 * 4) & 0xF]) << (12 - (1 * 4));
-    num |= ((uint16_t)rtab16[data >> (2 * 4) & 0xF]) << (12 - (2 * 4));
-    num |= ((uint16_t)rtab16[data >> (3 * 4) & 0xF]) << (12 - (3 * 4));
+    num |= (uint16_t)(rtab16[data >> (0 * 4) & 0xF] << (12 - (0 * 4)));
+    num |= (uint16_t)(rtab16[data >> (1 * 4) & 0xF] << (12 - (1 * 4)));
+    num |= (uint16_t)(rtab16[data >> (2 * 4) & 0xF] << (12 - (2 * 4)));
+    num |= (uint16_t)(rtab16[data >> (3 * 4) & 0xF] << (12 - (3 * 4)));
     return num;
 }
 
@@ -72,15 +72,15 @@ void makeCRCTable(const PARAM_CRC_T *params)
     uint16_t crc;
 
     if (params != NULL) {
-        memcpy(&_alg, params, sizeof(params));
+        memcpy(&_alg, params, sizeof(_alg));
     }
 
     for (uint16_t n = 0; n < 256; n++) {
-        crc = n << 8;
+        crc = (uint16_t)(n << 8);
         for (uint16_t i = 0; i < 8; i++) {
-            crc = (crc & 0x8000) ?
+            crc = (uint16_t) ((crc & 0x8000) ?
                 (crc << 1) ^ _alg.poly :
-                crc << 1;
+                crc << 1);
         }
         _table[n] = crc;
     }
@@ -91,10 +91,9 @@ uint16_t calcCRC16(const uint8_t* pData, const size_t len)
     uint8_t tmp;
     uint16_t ret = _alg.init;
 
-    for (unsigned i = 0; i < len; i++)
-    {
+    for (unsigned i = 0; i < len; i++) {
         tmp = (_alg.refIn) ? reverseU8(pData[i]) : pData[i];
-        ret = ret << 8 ^ _table[(ret >> 8) ^ tmp];
+        ret = (uint16_t)(ret << 8 ^ _table[(ret >> 8) ^ tmp]);
     }
     return (_alg.refOut) ?
         reverseU16(ret) ^ _alg.xorOut :
