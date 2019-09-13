@@ -3,7 +3,7 @@
 #include <stdbool.h>
 #include <stdio.h>
 #include <string.h>
-#include "CRC16.h"
+#include "crc16.h"
 
 static uint16_t _table[256];
 
@@ -47,24 +47,25 @@ static PARAM_CRC_T _alg = {
     .refIn = true,
     .refOut = true
 };
-const static uint8_t rtab16[] = {
+
+static const uint8_t rtab16[] = {
                     0,  8, 4, 12,
                     2, 10, 6, 14,
                     1,  9, 5, 13,
                     3, 11, 7, 15 };
 
 static uint8_t reverseU8(const uint8_t data) {
-    return (uint8_t)((rtab16[data & 0xF] << 4) |
-           (rtab16[data >> 4 & 0xF]));
+    return (uint8_t)(
+           (rtab16[data & 0xF] << 4) |
+            rtab16[data >> 4 & 0xF]);
 }
 
 static uint16_t reverseU16(const uint16_t data) {
-    uint16_t num = 0;
-    num |= (uint16_t)(rtab16[data >> (0 * 4) & 0xF] << (12 - (0 * 4)));
-    num |= (uint16_t)(rtab16[data >> (1 * 4) & 0xF] << (12 - (1 * 4)));
-    num |= (uint16_t)(rtab16[data >> (2 * 4) & 0xF] << (12 - (2 * 4)));
-    num |= (uint16_t)(rtab16[data >> (3 * 4) & 0xF] << (12 - (3 * 4)));
-    return num;
+	return (uint16_t)(
+		(rtab16[data & 0xF] << 12) |
+		(rtab16[data >> 4 & 0xF] << 8) |
+		(rtab16[data >> 8 & 0xF] << 4) |
+		 rtab16[data >> 12 & 0xF]);
 }
 
 void makeCRCTable(const PARAM_CRC_T *params)
