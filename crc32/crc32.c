@@ -6,6 +6,7 @@
 #include "crc32.h"
 
 static uint32_t _table[256];
+static uint32_t _tab16[16];
 
 // ref. https://reveng.sourceforge.io/crc-catalogue/17plus.htm
 const PARAM_CRC_T CRC32_PARAM_BZIP2 = {
@@ -72,6 +73,25 @@ static uint32_t reverseU32(const uint32_t data) {
         (rtab16[data >> 28 & 0xF]));
 }
 
+void makeCRCTable16(const PARAM_CRC_T *params)
+{
+    uint32_t crc;
+
+    if (params != NULL) {
+        memcpy(&_alg, params, sizeof(_alg));
+    }
+
+    for (uint32_t n = 0; n < 16; n++) {
+        crc = (uint32_t)(n << 28);
+        for (uint32_t i = 0; i < 4; i++) {
+            crc = (uint32_t) ((crc & 0x80000000) ?
+                ((crc << 1) ^ _alg.poly) :
+                (crc << 1));
+        }
+        _tab16[n] = crc;
+    }	
+}
+
 void makeCRCTable(const PARAM_CRC_T *params)
 {
     uint32_t crc;
@@ -89,6 +109,21 @@ void makeCRCTable(const PARAM_CRC_T *params)
         }
         _table[n] = crc;
     }
+}
+
+uint32_t calc4CRC32(const uint8_t* pData, const size_t len)
+{
+    uint8_t tmp;
+    uint32_t ret = _alg.init;
+
+    for (unsigned i = 0; i < len; i++) {
+        tmp = (_alg.refIn) ? reverseU8(pData[i]) : pData[i];
+        ret = (uint32_t)((ret << 4) ^ _tab16[(ret >> 28) ^ (tmp >> 4)]);
+        ret = (uint32_t)((ret << 4) ^ _tab16[(ret >> 28) ^ (tmp & 0xF)]);
+    }
+    return (_alg.refOut) ?
+        reverseU32(ret) ^ _alg.xorOut :
+        ret ^ _alg.xorOut;
 }
 
 uint32_t calcCRC32(const uint8_t* pData, const size_t len)
@@ -124,14 +159,19 @@ int main()
     };
 
     uint32_t result;
+    uint32_t result1;
     uint32_t check;
 
     for (unsigned i = 0; i < numAlg; i++) {
         makeCRCTable(testParam[i]);
+        makeCRCTable16(testParam[i]);
         result = calcCRC32(test, strlen(test));
+        result1 = calc4CRC32(test, strlen(test));
         check = testParam[i]->check;
         printf("%s:0x%04x, expected:0x%04x\r\n", strAlg[i], result, check);
         printf("  calc result:%s\r\n", (result != check) ? "Failed" : "Passed");
+        printf("%s:0x%04x, expected:0x%04x, 4bits\r\n", strAlg[i], result1, check);
+        printf("  calc result:%s\r\n", (result1 != check) ? "Failed" : "Passed");
     }
 
     return 0;
