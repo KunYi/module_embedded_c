@@ -3,6 +3,8 @@
 #
 cmake_minimum_required (VERSION 3.8)
 
+project(crc16)
+
 # Add source to this project's executable.
 add_executable (crc16 "crc16.c" "crc16.h")
 

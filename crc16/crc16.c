@@ -6,6 +6,7 @@
 #include "crc16.h"
 
 static uint16_t _table[256];
+static uint16_t _tab4[16];
 
 // ref. http://reveng.sourceforge.net/crc-catalogue/16.htm
 const PARAM_CRC_T CRC16_PARAM_ARC = {
@@ -36,6 +37,16 @@ const PARAM_CRC_T CRC16_PARAM_KERMIT = {
     .residue = 0x0000,
     .refIn = true,
     .refOut = true
+};
+
+const PARAM_CRC_T CRC16_PARAM_XMODEM = {
+    .poly = 0x1021,
+    .init = 0x0000,
+    .xorOut = 0x0000,
+    .check = 0x31c3,
+    .residue = 0x0000,
+    .refIn = false,
+    .refOut = false	
 };
 
 static PARAM_CRC_T _alg = {
@@ -87,6 +98,25 @@ void makeCRCTable(const PARAM_CRC_T *params)
     }
 }
 
+void makeCRCTabl4(const PARAM_CRC_T* params)
+{
+    uint16_t crc;
+
+    if (params != NULL) {
+        memcpy(&_alg, params, sizeof(_alg));
+    }
+
+    for (uint16_t n = 0; n < 16; n++) {
+        crc = (uint16_t)(n << 12);
+        for (uint16_t i = 0; i < 4; i++) {
+            crc = (uint16_t)((crc & 0x8000) ?
+                (crc << 1) ^ _alg.poly :
+                crc << 1);
+        }
+        _tab4[n] = crc;
+    }
+}
+
 uint16_t calcCRC16(const uint8_t* pData, const size_t len)
 {
     uint8_t tmp;
@@ -101,33 +131,54 @@ uint16_t calcCRC16(const uint8_t* pData, const size_t len)
         ret ^ _alg.xorOut;
 }
 
+uint16_t calc4CRC16(const uint8_t* pData, const size_t len)
+{
+    uint8_t tmp;
+    uint16_t ret = _alg.init;
+
+    for (unsigned i = 0; i < len; i++) {
+        tmp = (_alg.refIn) ? reverseU8(pData[i]) : pData[i];
+        ret = (uint16_t)(ret << 4 ^ _tab4[(ret >> 12) ^ (tmp >> 4)]);
+        ret = (uint16_t)(ret << 4 ^ _tab4[(ret >> 12) ^ (tmp & 0xF)]);
+    }
+    return (_alg.refOut) ?
+        reverseU16(ret) ^ _alg.xorOut :
+        ret ^ _alg.xorOut;
+}
 
 #ifdef _MSC_VER
 #if _MSC_VER > 1910 /* from VS2017, C99 */
 int main()
 {
     const uint8_t test[] = "123456789";
-    #define numAlg  (3) // number of algorithm
+    #define numAlg  (4) // number of algorithm
     const PARAM_CRC_T* testParam[numAlg]= {
         &CRC16_PARAM_ARC,
         &CRC16_PARAM_MODBUS,
-        &CRC16_PARAM_KERMIT
+        &CRC16_PARAM_KERMIT,
+		&CRC16_PARAM_XMODEM
     };
     const uint8_t *strAlg[numAlg] = {
         "CRC16/ARC",
         "CRC16/MODBUS",
-        "CRC16/KERMIT"
+        "CRC16/KERMIT",
+		"CRC16/XMODEM",
     };
 
     uint16_t result;
+    uint16_t result1;
     uint16_t check;
 
     for (unsigned i = 0; i < numAlg; i++) {
         makeCRCTable(testParam[i]);
+        makeCRCTabl4(testParam[i]);
         result = calcCRC16(test, strlen(test));
+        result1 = calc4CRC16(test, strlen(test));
         check = testParam[i]->check;
         printf("%s:0x%04x, expected:0x%04x\r\n", strAlg[i], result, check);
         printf("  calc result:%s\r\n", (result != check) ? "Failed" : "Passed");
+        printf("%s:0x%04x, expected:0x%04x, 4bits\r\n", strAlg[i], result1, check);
+        printf("  calc result:%s\r\n", (result1 != check) ? "Failed" : "Passed");
     }
 
     return 0;
